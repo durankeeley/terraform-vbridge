@@ -1,0 +1,54 @@
+package provider
+
+import (
+	"context"
+	"terraform-provider-vbridge/api"
+	"terraform-provider-vbridge/resource/virtualmachine"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+)
+
+func Provider() *schema.Provider {
+	return &schema.Provider{
+		Schema: map[string]*schema.Schema{
+			"api_url": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"api_key": {
+				Type:      schema.TypeString,
+				Required:  true,
+				Sensitive: true,
+			},
+			"user_email": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+		},
+		ResourcesMap: map[string]*schema.Resource{
+			"vm_provision": virtualmachine.Resource(),
+		},
+		ConfigureContextFunc: configureProvider,
+	}
+}
+
+func configureProvider(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	apiURL := d.Get("api_url").(string)
+	apiKey := d.Get("api_key").(string)
+	userEmail := d.Get("user_email").(string)
+
+	client, err := api.NewClient(apiURL, apiKey, userEmail)
+	if err != nil {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  "Unable to create API client",
+			Detail:   err.Error(),
+		})
+		return nil, diags
+	}
+
+	return client, diags
+}

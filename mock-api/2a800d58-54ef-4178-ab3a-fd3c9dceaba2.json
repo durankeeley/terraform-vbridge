@@ -1,0 +1,21 @@
+{
+ "clientId": 10319,
+ "name": "postmanvm",
+ "template": "Windows2022_Standard_30GB",
+ "guestOsId": "windows2019srv_64Guest",
+ "cores": 2,
+ "memorySize": 6,
+ "operatingSystemDisk": {
+  "capacity": 30,
+  "storageProfile": "vStorageT1"
+ },
+ "isoFile": "example.iso",
+ "quoteItem": {},
+ "hostingLocation": {
+  "id": "vcchcres",
+  "name": "Christchurch",
+  "defaultNetwork": "CHC-CUST-SDC-WAN"
+ },
+ "backupType": "vBackup",
+ "id": "2a800d58-54ef-4178-ab3a-fd3c9dceaba2"
+}
