@@ -16,6 +16,13 @@ variable "client_id" {
   sensitive   = true
 }
 
+variable "api_url" {
+  description = "URL for the API"
+  type        = string
+  default = "http://127.0.0.1:8087"
+  sensitive   = true
+}
+
 terraform {
   required_providers {
     vbridge = {
@@ -26,12 +33,12 @@ terraform {
 }
 
 provider "vbridge" {
-  api_url    = "https://api.mycloudspace.co.nz"
+  api_url    = "${var.api_url}"
   api_key    = "${var.api_key}"
   user_email = "${var.api_user_email}"
 }
 
-resource "vm_provision" "example" {
+resource "vbridge_virtual_machine" "example" {
   provider = vbridge
   client_id                          = var.client_id
   name                               = "terraformvm"
@@ -40,11 +47,19 @@ resource "vm_provision" "example" {
   cores                              = 2
   memory_size                        = 6
   operating_system_disk_capacity     = 30
-  operating_system_disk_storage_profile = "vStorageT1"
+  # operating_system_disk_storage_profile = "Performance" #ProductionAPI
+  operating_system_disk_storage_profile = "vStorageT1" 
   iso_file = ""
   quote_item = {}
   hosting_location_id             = "vcchcres"
   hosting_location_name           = "Christchurch"
   hosting_location_default_network = "CHC-CUST-SDC-WAN"
   backup_type                     = "vBackup"
+  # backup_type                     = "vBackupNone" #ProductionAPI
+}
+
+resource "vbridge_virtual_machine_additionaldisk" "disk2" {
+  vm_id = resource.vbridge_virtual_machine.example.vm_id
+  storage_profile = "vStorageT1"
+  capacity = 35
 }
