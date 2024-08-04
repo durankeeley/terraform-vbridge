@@ -1,6 +1,7 @@
 package virtualmachine
 
 import (
+	"fmt"
 	"terraform-provider-vbridge/api"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -8,6 +9,16 @@ import (
 
 func Create(d *schema.ResourceData, meta interface{}) error {
 	apiClient := meta.(*api.Client)
+
+	template, templateSet := d.GetOk("template")
+	capacity, capacitySet := d.GetOk("operating_system_disk_capacity")
+
+	if templateSet && capacitySet {
+		return fmt.Errorf("`operating_system_disk_capacity` should not be set when `template` is specified")
+	} else if !templateSet && !capacitySet {
+		return fmt.Errorf("`operating_system_disk_capacity` is required when `template` is not specified")
+	}
+
 	vm := api.VirtualMachine{
 		ClientId:   d.Get("client_id").(int),
 		Name:       d.Get("name").(string),
@@ -16,7 +27,7 @@ func Create(d *schema.ResourceData, meta interface{}) error {
 		Cores:      d.Get("cores").(int),
 		MemorySize: d.Get("memory_size").(int),
 		OperatingSystemDisk: api.Disk{
-			Capacity:       d.Get("operating_system_disk_capacity").(int),
+			// Capacity:       d.Get("operating_system_disk_capacity").(int),
 			StorageProfile: d.Get("operating_system_disk_storage_profile").(string),
 		},
 		BackupType: d.Get("backup_type").(string),
@@ -26,6 +37,12 @@ func Create(d *schema.ResourceData, meta interface{}) error {
 			DefaultNetwork: d.Get("hosting_location_default_network").(string),
 		},
 		QuoteItem: make(map[string]interface{}), // Initialize with an empty map
+	}
+
+	if templateSet {
+		vm.Template = template.(string)
+	} else {
+		vm.OperatingSystemDisk.Capacity = capacity.(int)
 	}
 
 	if v, ok := d.GetOk("iso_file"); ok {
