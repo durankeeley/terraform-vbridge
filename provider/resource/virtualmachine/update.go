@@ -5,6 +5,5 @@ import (
 )
 
 func Update(d *schema.ResourceData, meta interface{}) error {
-	// Implement update logic if needed
 	return nil
 }

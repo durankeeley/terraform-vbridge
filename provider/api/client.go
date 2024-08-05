@@ -219,3 +219,11 @@ func (c *Client) DeleteVM(vmID string, moRef string) error {
 
 	return nil
 }
+
+func (c *Client) CreateAdditionalDisk(vmID string, disk Disk) (string, error) {
+	return "", nil
+}
+
+func (c *Client) GetAdditionalDisk(vmID string, disk Disk) (string, error) {
+	return "", nil
+}
