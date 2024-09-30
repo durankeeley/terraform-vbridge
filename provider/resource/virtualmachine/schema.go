@@ -2,6 +2,7 @@ package virtualmachine
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"fmt"
 )
 
 func Schema() map[string]*schema.Schema {
@@ -16,7 +17,7 @@ func Schema() map[string]*schema.Schema {
 		},
 		"template": {
 			Type:     schema.TypeString,
-			Required: true,
+			Optional: true,
 		},
 		"guest_os_id": {
 			Type:     schema.TypeString,
@@ -32,7 +33,14 @@ func Schema() map[string]*schema.Schema {
 		},
 		"operating_system_disk_capacity": {
 			Type:     schema.TypeInt,
-			Required: true,
+			Optional: true,
+			Computed: true,
+			ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+				if v, ok := val.(int); ok && v <= 0 {
+					errs = append(errs, fmt.Errorf("%q must be a positive integer, got: %d", key, v))
+				}
+				return
+			},
 		},
 		"operating_system_disk_storage_profile": {
 			Type:     schema.TypeString,
