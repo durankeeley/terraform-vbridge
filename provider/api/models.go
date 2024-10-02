@@ -59,3 +59,32 @@ type VirtualDisk struct {
 	Name                string `json:"name,omitempty"`
 	CapacityDescription string `json:"capacityDescription,omitempty"`
 }
+
+// Temp Solution
+// Convert Capacity from float to int for GetVMDetailedByID
+func (vd *VirtualDisk) UnmarshalJSON(data []byte) error {
+	type Alias VirtualDisk
+	aux := &struct {
+		Capacity float64 `json:"capacity"`
+		*Alias
+	}{
+		Alias: (*Alias)(vd),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	vd.Capacity = int(aux.Capacity)
+	return nil
+}
+
+type PowerOperationPayload struct {
+    VirtualResourceId string `json:"VirtualResourceId"`
+    Operation         string `json:"Operation"`
+}
+
+type DeleteVMOperationPayload struct {
+	VirtualResourceId string `json:"VirtualResourceId"`
+	CheckToken        string `json:"CheckToken"`
+}
