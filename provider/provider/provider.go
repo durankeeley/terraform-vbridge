@@ -4,6 +4,7 @@ import (
 	"context"
 	"terraform-provider-vbridge/api"
 	"terraform-provider-vbridge/resource/virtualmachine"
+	"terraform-provider-vbridge/resource/virtualmachine_additionaldisk"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -27,7 +28,8 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"vm_provision": virtualmachine.Resource(),
+			"vbridge_virtual_machine":                virtualmachine.Resource(),
+			"vbridge_virtual_machine_additionaldisk": additionaldisk.Resource(),
 		},
 		ConfigureContextFunc: configureProvider,
 	}

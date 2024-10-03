@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
+	"os"
+	"path"
 	"strings"
 	"sync"
 
@@ -23,9 +25,10 @@ type VirtualMachine struct {
 	AdditionalDisks     []Disk   `json:"additionalDisks,omitempty"`
 	IsoFile             string   `json:"isoFile,omitempty"`
 	QuoteItem           Quote    `json:"quoteItem,omitempty"`
-	HostingLocation     Location `json:"hostingLocation"`
 	BackupType          string   `json:"backupType"`
-	Id                  string   `json:"id"`
+	Id                  int      `json:"id"`
+	HostingLocation     Location `json:"hostingLocation"`
+	MoRef               string   `json:"moRef"`
 }
 
 type Disk struct {
@@ -43,7 +46,7 @@ type Location struct {
 
 var (
 	vmMutex sync.Mutex
-	vms     = make(map[string]VirtualMachine)
+	vms     = make(map[int]VirtualMachine)
 )
 
 const (
@@ -54,9 +57,43 @@ const (
 func main() {
 	http.HandleFunc("/api/Provisioning/VirtualMachine", provisionVMHandler)
 	http.HandleFunc("/api/client/virtualresources/", getAllVMsHandler)
+	http.HandleFunc("/api/VirtualResource/Detailed/", getVMDetailedByIDHandler)
 
 	log.Println("Starting server on :8087")
 	log.Fatal(http.ListenAndServe(":8087", nil))
+}
+
+func authenticate(r *http.Request) bool {
+	apiKeyHeader := r.Header.Get("Authorization")
+	userHeader := r.Header.Get("x-mcs-user")
+
+	return apiKeyHeader == fmt.Sprintf("Bearer %s", apiKey) && userHeader == user
+}
+
+func hasMissingRequiredFields(vm VirtualMachine) (bool, string) {
+	fields := []struct {
+		value string
+		name  string
+	}{
+		{fmt.Sprint(vm.ClientId), "ClientId"},
+		{vm.Name, "Name"},
+		{vm.GuestOsId, "GuestOsId"},
+		{fmt.Sprint(vm.Cores), "Cores"},
+		{fmt.Sprint(vm.MemorySize), "MemorySize"},
+		{vm.OperatingSystemDisk.StorageProfile, "OperatingSystemDisk.StorageProfile"},
+		{vm.HostingLocation.Id, "HostingLocation.Id"},
+		{vm.HostingLocation.Name, "HostingLocation.Name"},
+		{vm.HostingLocation.DefaultNetwork, "HostingLocation.DefaultNetwork"},
+		{vm.BackupType, "BackupType"},
+	}
+
+	for _, field := range fields {
+		if field.value == "" || field.value == "0" {
+			return true, field.name
+		}
+	}
+
+	return false, ""
 }
 
 func provisionVMHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,37 +110,33 @@ func provisionVMHandler(w http.ResponseWriter, r *http.Request) {
 	var vm VirtualMachine
 	err := json.NewDecoder(r.Body).Decode(&vm)
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		handleError(w, fmt.Sprintf("Error parsing VM file %s", err), http.StatusBadRequest)
 		return
 	}
 
-	// Check required fields
-	if vm.ClientId == 0 || vm.Name == "" || vm.Template == "" || vm.GuestOsId == "" || vm.Cores == 0 || vm.MemorySize == 0 || vm.OperatingSystemDisk.Capacity == 0 || vm.OperatingSystemDisk.StorageProfile == "" || vm.HostingLocation.Id == "" || vm.HostingLocation.Name == "" || vm.HostingLocation.DefaultNetwork == "" || vm.BackupType == "" {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
+	if missing, field := hasMissingRequiredFields(vm); missing {
+		handleError(w, fmt.Sprintf("Missing required field: %s", field), http.StatusBadRequest)
 		return
 	}
 
-	vmID := uuid.New().String()
+	vmID := rand.Int()
 	vm.Id = vmID
+	vm.MoRef = uuid.New().String()
+
+	if vm.Template == "Windows2022_Standard_30GB" {
+		vm.OperatingSystemDisk.Capacity = 30
+	}
 
 	vmMutex.Lock()
 	vms[vmID] = vm
 	vmMutex.Unlock()
 
-	file, err := json.MarshalIndent(vm, "", " ")
-	if err != nil {
-		http.Error(w, "Error saving VM details", http.StatusInternalServerError)
-		return
-	}
-
-	err = ioutil.WriteFile(fmt.Sprintf("%s.json", vmID), file, 0644)
-	if err != nil {
-		http.Error(w, "Error saving VM details", http.StatusInternalServerError)
+	if err := saveVMToFile(vmID, vm); err != nil {
+		handleError(w, "Error saving VM details", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	//json.NewEncoder(w).Encode(map[string]string{"id": vmID})
 }
 
 func getAllVMsHandler(w http.ResponseWriter, r *http.Request) {
@@ -117,38 +150,182 @@ func getAllVMsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var allVMs []VirtualMachine
-
-	files, err := ioutil.ReadDir(".")
+	allVMs, err := loadAllVMs()
 	if err != nil {
-		http.Error(w, "Error reading VM files", http.StatusInternalServerError)
+		handleError(w, "Error loading VMs", http.StatusInternalServerError)
 		return
-	}
-
-	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
-			data, err := ioutil.ReadFile(file.Name())
-			if err != nil {
-				http.Error(w, "Error reading VM file", http.StatusInternalServerError)
-				return
-			}
-			var vm VirtualMachine
-			err = json.Unmarshal(data, &vm)
-			if err != nil {
-				http.Error(w, "Error parsing VM file", http.StatusInternalServerError)
-				return
-			}
-			allVMs = append(allVMs, vm)
-		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(allVMs)
 }
 
-func authenticate(r *http.Request) bool {
-	apiKeyHeader := r.Header.Get("Authorization")
-	userHeader := r.Header.Get("x-mcs-user")
+func getVMDetailedByIDHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
 
-	return apiKeyHeader == fmt.Sprintf("apiKey %s", apiKey) && userHeader == user
+	vmID := path.Base(r.URL.Path)
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 5 {
+		handleError(w, "Invalid URL path", http.StatusBadRequest)
+		return
+	}
+
+	vm, err := loadVMFromFile(vmID)
+	if err != nil {
+		if os.IsNotExist(err) {
+			handleError(w, "VM not found", http.StatusNotFound)
+		} else {
+			handleError(w, "Error reading VM file", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	response := createVMDetailResponse(vm)
+	log.Printf("Vm Detail Response %s", response)
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		handleError(w, "Error encoding JSON response", http.StatusInternalServerError)
+	}
+}
+
+func handleError(w http.ResponseWriter, message string, statusCode int) {
+	log.Println(message)
+	http.Error(w, message, statusCode)
+}
+
+func saveVMToFile(vmID int, vm VirtualMachine) error {
+	file, err := json.MarshalIndent(vm, "", " ")
+	if err != nil {
+		return err
+	}
+
+	fileName := fmt.Sprintf("%d.json", vmID)
+	log.Printf("Saving VM file %d.json", vmID)
+	return os.WriteFile(fileName, file, 0644)
+}
+
+func loadAllVMs() ([]map[string]interface{}, error) {
+	var allVMs []map[string]interface{}
+	log.Printf("Reading all json files")
+	files, err := os.ReadDir(".")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			vm, err := loadVMFromFile(strings.TrimSuffix(file.Name(), ".json"))
+			log.Printf("Reading VM file %s", file.Name())
+			if err != nil {
+				log.Printf("Error parsing VM file %s: %v\n", file.Name(), err)
+				continue
+			}
+
+			vmMap := map[string]interface{}{
+				"clientId":            vm.ClientId,
+				"name":                vm.Name,
+				"template":            vm.Template,
+				"guestOsId":           vm.GuestOsId,
+				"cores":               vm.Cores,
+				"memorySize":          vm.MemorySize,
+				"operatingSystemDisk": vm.OperatingSystemDisk,
+				"additionalDisks":     vm.AdditionalDisks,
+				"isoFile":             vm.IsoFile,
+				"quoteItem":           vm.QuoteItem,
+				"backupType":          vm.BackupType,
+				"id":                  vm.Id,
+				"hostingLocation":     vm.HostingLocation.Name,
+			}
+
+			allVMs = append(allVMs, vmMap)
+		}
+	}
+	return allVMs, nil
+}
+
+func loadVMFromFile(vmID string) (VirtualMachine, error) {
+	fileName := fmt.Sprintf("%s.json", vmID)
+	data, err := os.ReadFile(fileName)
+	log.Printf("Reading json file %s", fileName)
+	if err != nil {
+		return VirtualMachine{}, err
+	}
+
+	var vm VirtualMachine
+	err = json.Unmarshal(data, &vm)
+	if err != nil {
+		return VirtualMachine{}, err
+	}
+
+	return vm, nil
+}
+
+func createVMDetailResponse(vm VirtualMachine) map[string]interface{} {
+	log.Printf("Creating VM Detail Response")
+	return map[string]interface{}{
+		"clientId": vm.ClientId,
+		"specification": map[string]interface{}{
+			"cores":               vm.Cores,
+			"sockets":             1,
+			"memoryGb":            vm.MemorySize,
+			"moRef":               vm.MoRef,
+			"virtualDisks":        generateVirtualDisks(vm.OperatingSystemDisk, vm.AdditionalDisks),
+			"backupType":          vm.BackupType,
+			"hostingLocationName": vm.HostingLocation.Name,
+			"hostingLocationId":   vm.HostingLocation.Id,
+		},
+		"id":                  vm.Id,
+		"name":                vm.Name,
+		"lastVirtualDisks":    1,
+		"lastCPU":             vm.Cores,
+		"lastMemory":          vm.MemorySize,
+		"hostingLocation":     vm.HostingLocation.Name,
+		"hostingLocationType": "DefaultType",
+		"annotation":          "Default annotation",
+	}
+}
+
+func generateVirtualDisks(operatingSystemDisk Disk, additionalDisks []Disk) []map[string]interface{} {
+	var virtualDisks []map[string]interface{}
+	log.Printf("Generating Virtual Disks for VM Detail Response")
+
+	// Add the operating system disk as the first virtual disk
+	virtualDisks = append(virtualDisks, map[string]interface{}{
+		"moRef":              uuid.New().String(),
+		"capacity":           operatingSystemDisk.Capacity,
+		"vmfs":               operatingSystemDisk.StorageProfile,
+		"slotInfo":           "slotInfo",
+		"tier":               "tier",
+		"name":               "OperatingSystemDisk",
+		"capacityDesciption": "Operating system disk",
+		"vDiskID":            "vDiskID",
+		"filename":           "filename",
+		"friendlyName":       "OS Disk",
+	})
+
+	// Add additional disks
+	for _, disk := range additionalDisks {
+		virtualDisk := map[string]interface{}{
+			"moRef":              uuid.New().String(),
+			"capacity":           disk.Capacity,
+			"vmfs":               disk.StorageProfile,
+			"slotInfo":           "slotInfo",
+			"tier":               "tier",
+			"name":               "AdditionalDisk",
+			"capacityDesciption": "Additional disk",
+			"vDiskID":            "vDiskID",
+			"filename":           "filename",
+			"friendlyName":       "Additional Disk",
+		}
+		virtualDisks = append(virtualDisks, virtualDisk)
+		log.Printf("Added virtual disk: %+v", virtualDisk)
+	}
+
+	log.Printf("Generated Virtual Disks: %v", virtualDisks)
+	return virtualDisks
 }
