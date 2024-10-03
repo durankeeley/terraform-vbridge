@@ -80,11 +80,17 @@ func (vd *VirtualDisk) UnmarshalJSON(data []byte) error {
 }
 
 type PowerOperationPayload struct {
-    VirtualResourceId string `json:"VirtualResourceId"`
-    Operation         string `json:"Operation"`
+	VirtualResourceId string `json:"VirtualResourceId"`
+	Operation         string `json:"Operation"`
 }
 
 type DeleteVMOperationPayload struct {
 	VirtualResourceId string `json:"VirtualResourceId"`
 	CheckToken        string `json:"CheckToken"`
+}
+
+type CreateAdditionalDiskPayload struct {
+	VirtualResourceId string `json:"virtualResourceId"`
+	Tier              string `json:"tier"`
+	Size              int    `json:"size"`
 }

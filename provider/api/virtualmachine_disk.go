@@ -1,51 +1,24 @@
 package api
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 )
 
 func (c *Client) CreateAdditionalDisk(vmID string, disk VirtualDisk) error {
-	url := fmt.Sprintf("%s/api/virtualresource/AddDisk", c.APIUrl)
-	payload := struct {
-		VirtualResourceId string `json:"virtualResourceId"`
-		Tier              string `json:"tier"`
-		Size              int    `json:"size"`
-	}{
+
+	endpoint := "/api/virtualresource/AddDisk"
+	payload := CreateAdditionalDiskPayload{
 		VirtualResourceId: vmID,
 		Tier:              disk.StorageProfile,
 		Size:              disk.Capacity,
 	}
 
-	jsonData, err := json.Marshal(payload)
+	resp, err := c.apiRequest("POST", endpoint, payload)
 	if err != nil {
-		return fmt.Errorf("error marshaling JSON: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Errorf("error creating HTTP request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.APIKey)
-	req.Header.Set("x-mcs-user", c.UserEmail)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error making HTTP request: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("error response from API: %s - %s", resp.Status, string(bodyBytes))
-	}
 
 	return nil
 }
@@ -63,22 +36,31 @@ func (c *Client) CreateAdditionalDiskWithComparison(vmID string, disk VirtualDis
 		return "", fmt.Errorf("error creating additional disk: %w", err)
 	}
 
-	time.Sleep(1 * time.Minute)
+	// Polling parameters
+	timeout := 2 * time.Minute
+	interval := 5 * time.Second
+	startTime := time.Now()
 
-	updatedVM, err := c.GetVMDetailedByID(vmID)
-	if err != nil {
-		return "", fmt.Errorf("error getting VM details after adding disk: %w", err)
+	for {
+		if time.Since(startTime) >= timeout {
+			return "", fmt.Errorf("timed out waiting for disk to be added to VM %s", vmID)
+		}
+
+		updatedVM, err := c.GetVMDetailedByID(vmID)
+		if err != nil {
+			fmt.Printf("Error getting VM details during polling: %v\n", err)
+		} else {
+			updatedDisks := updatedVM.Specification.VirtualDisks
+
+			newDiskMoRef := findNewDiskMoRef(initialDisks, updatedDisks)
+			if newDiskMoRef != "" {
+				fmt.Printf("New disk added with MoRef: %s\n", newDiskMoRef)
+				return newDiskMoRef, nil
+			}
+		}
+
+		time.Sleep(interval)
 	}
-	updatedDisks := updatedVM.Specification.VirtualDisks
-
-	newDiskMoRef := findNewDiskMoRef(initialDisks, updatedDisks)
-	if newDiskMoRef == "" {
-		return "", fmt.Errorf("no new disk was detected")
-	}
-
-	fmt.Printf("New disk added with MoRef: %s\n", newDiskMoRef)
-
-	return newDiskMoRef, nil
 }
 
 func findNewDiskMoRef(initialDisks, updatedDisks []VirtualDisk) string {

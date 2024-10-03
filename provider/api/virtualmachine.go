@@ -99,6 +99,20 @@ func (c *Client) GetVMDetailedByID(vmID string) (VirtualMachine, error) {
 	vm := temp.VirtualMachine
 	vm.HostingLocation = HostingLocation{Name: temp.HostingLocation}
 
+	// Define the translation map from backend values to friendly names
+	var storageProfileMap = map[string]string{
+		"Performance":     "vStorageT1",
+		"General Purpose": "vStorageT2",
+		"Low Use":         "vStorageT3",
+	}
+
+	// Translate the Tier for VirtualDisks
+	for i, disk := range vm.Specification.VirtualDisks {
+		if friendlyName, ok := storageProfileMap[disk.Tier]; ok {
+			vm.Specification.VirtualDisks[i].Tier = friendlyName
+		}
+	}
+
 	return vm, nil
 }
 

@@ -46,20 +46,40 @@ resource "vbridge_virtual_machine" "example" {
   guest_os_id                        = "windows2019srv_64Guest"
   cores                              = 2
   memory_size                        = 6
-  operating_system_disk_capacity     = 30
-  # operating_system_disk_storage_profile = "Performance" #ProductionAPI
+  # operating_system_disk_capacity     = 30 
   operating_system_disk_storage_profile = "vStorageT1" 
   iso_file = ""
   quote_item = {}
   hosting_location_id             = "vcchcres"
   hosting_location_name           = "Christchurch"
   hosting_location_default_network = "CHC-CUST-SDC-WAN"
-  backup_type                     = "vBackup"
-  # backup_type                     = "vBackupNone" #ProductionAPI
+  backup_type                     = "vBackupDisk"
+  # backup_type                     = "vBackupNone"
+
+   lifecycle {
+    ignore_changes = [
+      guest_os_id, hosting_location_default_network
+    ]
+   }
 }
 
+# Performance Disk
 resource "vbridge_virtual_machine_additionaldisk" "disk2" {
   vm_id = resource.vbridge_virtual_machine.example.vm_id
   storage_profile = "vStorageT1"
   capacity = 35
 }
+
+# # General Use Disk 
+# resource "vbridge_virtual_machine_additionaldisk" "disk2" {
+#   vm_id = resource.vbridge_virtual_machine.example.vm_id
+#   storage_profile = "vStorageT2"
+#   capacity = 35
+# }
+
+# # Low Use Disk 
+# resource "vbridge_virtual_machine_additionaldisk" "disk2" {
+#   vm_id = resource.vbridge_virtual_machine.example.vm_id
+#   storage_profile = "vStorageT3"
+#   capacity = 35
+# }
