@@ -34,11 +34,11 @@ jobs:
         GOARCH: amd64
       run: go build -o provider-compiled/terraform-provider-vbridge-vm
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: golang-binaries
-        path: ./provider/provider-compiled/
+    # - name: Upload Artifacts
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: golang-binaries
+    #     path: ./provider/provider-compiled/
 
     - name: Create GitHub Release
       id: create_release
@@ -57,7 +57,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: provider-compiled/terraform-provider-vbridge-vm.exe
+        asset_path: ./provider/provider-compiled/terraform-provider-vbridge-vm.exe
         asset_name: terraform-provider-vbridge-vm.exe
         asset_content_type: application/octet-stream
 
@@ -67,6 +67,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: provider-compiled/terraform-provider-vbridge-vm
+        asset_path: ./provider/provider-compiled/terraform-provider-vbridge-vm
         asset_name: terraform-provider-vbridge-vm
         asset_content_type: application/octet-stream
