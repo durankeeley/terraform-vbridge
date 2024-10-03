@@ -26,7 +26,7 @@ func Create(d *schema.ResourceData, meta interface{}) error {
 		GuestOsId:  d.Get("guest_os_id").(string),
 		Cores:      d.Get("cores").(int),
 		MemorySize: d.Get("memory_size").(int),
-		OperatingSystemDisk: api.Disk{
+		OperatingSystemDisk: api.VirtualDisk{
 			// Capacity:       d.Get("operating_system_disk_capacity").(int),
 			StorageProfile: d.Get("operating_system_disk_storage_profile").(string),
 		},
@@ -47,16 +47,6 @@ func Create(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("iso_file"); ok {
 		vm.IsoFile = v.(string)
-	}
-
-	if v, ok := d.GetOk("additional_disks"); ok {
-		for _, disk := range v.([]interface{}) {
-			d := disk.(map[string]interface{})
-			vm.AdditionalDisks = append(vm.AdditionalDisks, api.Disk{
-				Capacity:       d["capacity"].(int),
-				StorageProfile: d["storage_profile"].(string),
-			})
-		}
 	}
 
 	if v, ok := d.GetOk("quote_item"); ok {

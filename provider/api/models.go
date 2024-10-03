@@ -9,15 +9,14 @@ type VirtualMachine struct {
 	GuestOsId           string                 `json:"guestOsId"`
 	Cores               int                    `json:"cores"`
 	MemorySize          int                    `json:"memorySize"`
-	OperatingSystemDisk Disk                   `json:"operatingSystemDisk"`
-	AdditionalDisks     []Disk                 `json:"additionalDisks,omitempty"`
+	OperatingSystemDisk VirtualDisk            `json:"operatingSystemDisk"`
 	IsoFile             string                 `json:"isoFile,omitempty"`
 	QuoteItem           map[string]interface{} `json:"quoteItem"`
 	HostingLocation     HostingLocation        `json:"hostingLocation"`
-	BackupType          string                 `json:"backupType"`
 	Id                  json.Number            `json:"id,omitempty"`
 	Specification       Specification          `json:"specification"`
 	MountedISO          *string                `json:"mountedISO"`
+	BackupType          string                 `json:"backupType,omitempty"`
 }
 
 type HostingLocation struct {
@@ -36,16 +35,7 @@ type Specification struct {
 	VirtualDisks      []VirtualDisk   `json:"virtualDisks"`
 	NetworkDevices    []NetworkDevice `json:"networkDevices"`
 	HostingLocationId string          `json:"hostingLocationId"`
-}
-
-type VirtualDisk struct {
-	MoRef               string  `json:"moRef"`
-	Capacity            float64 `json:"capacity"`
-	Vmfs                string  `json:"vmfs"`
-	SlotInfo            string  `json:"slotInfo"`
-	Tier                string  `json:"tier"`
-	Name                string  `json:"name"`
-	CapacityDescription string  `json:"capacityDescription"`
+	BackupType        string          `json:"backupType"`
 }
 
 type NetworkDevice struct {
@@ -58,7 +48,49 @@ type NetworkDevice struct {
 	NetworkId      string `json:"networkId"`
 }
 
-type Disk struct {
-	Capacity       int    `json:"capacity"`
-	StorageProfile string `json:"storageProfile"`
+type VirtualDisk struct {
+	// Detailed returns Capacity as a float
+	Capacity            int    `json:"capacity"`
+	StorageProfile      string `json:"storageProfile"`
+	MoRef               string `json:"moRef,omitempty"`
+	Vmfs                string `json:"vmfs,omitempty"`
+	SlotInfo            string `json:"slotInfo,omitempty"`
+	Tier                string `json:"tier,omitempty"`
+	Name                string `json:"name,omitempty"`
+	CapacityDescription string `json:"capacityDescription,omitempty"`
+}
+
+// Temp Solution
+// Convert Capacity from float to int for GetVMDetailedByID
+func (vd *VirtualDisk) UnmarshalJSON(data []byte) error {
+	type Alias VirtualDisk
+	aux := &struct {
+		Capacity float64 `json:"capacity"`
+		*Alias
+	}{
+		Alias: (*Alias)(vd),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	vd.Capacity = int(aux.Capacity)
+	return nil
+}
+
+type PowerOperationPayload struct {
+	VirtualResourceId string `json:"VirtualResourceId"`
+	Operation         string `json:"Operation"`
+}
+
+type DeleteVMOperationPayload struct {
+	VirtualResourceId string `json:"VirtualResourceId"`
+	CheckToken        string `json:"CheckToken"`
+}
+
+type CreateAdditionalDiskPayload struct {
+	VirtualResourceId string `json:"virtualResourceId"`
+	Tier              string `json:"tier"`
+	Size              int    `json:"size"`
 }
