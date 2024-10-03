@@ -6,7 +6,7 @@ $env:GOOS = "windows"; $env:GOARCH = "amd64"; go build -o "..\provider-compiled\
 $env:GOOS = "linux"; $env:GOARCH = "amd64"; go build -o "..\provider-compiled\terraform-provider-vbridge-vm"
 ```
 
-## Compile Provider on Windows
+## Compile Provider on Linux
 ```
 env GOOS=windows GOARCH=amd64 go build -o "../provider-compiled/terraform-provider-vbridge-vm.exe"
 env GOOS=linux GOARCH=amd64 go build -o "../provider-compiled/terraform-provider-vbridge-vm"
