@@ -119,6 +119,7 @@ func TestGetVMByName(t *testing.T) {
 	assert.NoError(t, err, "expected no error from GetVMByName")
 	assert.Equal(t, "12345", result, "VM ID mismatch")
 }
+
 func TestGetVMDetailedByID(t *testing.T) {
 	// Given
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -181,4 +182,80 @@ func TestGetVMDetailedByID(t *testing.T) {
 
 	assert.Equal(t, "vcchcres", result.Specification.HostingLocationId, "Hosting Location ID mismatch")
 	assert.Equal(t, "Christchurch", result.HostingLocation.Name, "Hosting Location Name mismatch")
+}
+
+func TestPowerOffVM(t *testing.T) {
+	// Given
+	expectedPayload := PowerOperationPayload{
+		VirtualResourceId: "7452",
+		Operation:         "off",
+	}
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Handle POST /api/virtualresource/poweroperation
+		if r.Method == "POST" && r.URL.Path == "/api/virtualresource/poweroperation" {
+			w.Header().Set("Content-Type", "application/json")
+
+			var receivedPayload PowerOperationPayload
+			err := json.NewDecoder(r.Body).Decode(&receivedPayload)
+			if err != nil {
+				t.Errorf("Error decoding request body: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			assert.Equal(t, expectedPayload, receivedPayload, "Payload mismatch")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	client := testClient(mockServer.URL)
+
+	// When
+	err := client.PowerOffVM("7452")
+
+	// Then
+	assert.NoError(t, err, "expected no error from PowerOffVM")
+}
+
+func TestDeleteVM(t *testing.T) {
+	// Given
+	expectedPayload := DeleteVMOperationPayload{
+		VirtualResourceId: "7452",
+		CheckToken:        "vm-000",
+	}
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Handle POST /api/virtualresource/poweroperation
+		if r.Method == "POST" && r.URL.Path == "/api/virtualresource/delete" {
+			w.Header().Set("Content-Type", "application/json")
+
+			var receivedPayload DeleteVMOperationPayload
+			err := json.NewDecoder(r.Body).Decode(&receivedPayload)
+			if err != nil {
+				t.Errorf("Error decoding request body: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			assert.Equal(t, expectedPayload, receivedPayload, "Payload mismatch")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	client := testClient(mockServer.URL)
+
+	// When
+	err := client.DeleteVM("7452", "vm-000")
+
+	// Then
+	assert.NoError(t, err, "expected no error from DeleteVM")
 }
