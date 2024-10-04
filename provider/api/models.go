@@ -95,3 +95,16 @@ type CreateAdditionalDiskPayload struct {
 	Tier              string `json:"tier"`
 	Size              int    `json:"size"`
 }
+
+type ExtendDiskPayload struct {
+	VirtualResourceId string `json:"VirtualResourceId"`
+	DiskUUID          string `json:"diskUUID"`
+	NewSize           int    `json:"newSize"`
+	Description       string `json:"description"`
+}
+
+type DeleteDiskPayload struct {
+	VirtualResourceId string `json:"VirtualResourceId"`
+	DiskUUID          string `json:"diskUUID"`
+	Description       string `json:"description"`
+}

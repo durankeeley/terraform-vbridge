@@ -32,6 +32,10 @@ func Schema() map[string]*schema.Schema {
 			Type:     schema.TypeInt,
 			Required: true,
 		},
+		"operating_system_disk_guid": {
+			Type:     schema.TypeString,
+			Computed: true,
+		},
 		"operating_system_disk_capacity": {
 			Type:     schema.TypeInt,
 			Optional: true,

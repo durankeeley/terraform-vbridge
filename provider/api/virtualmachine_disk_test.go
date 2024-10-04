@@ -217,7 +217,7 @@ func TestGetAdditionalDisk(t *testing.T) {
 	client := testClient(mockServer.URL)
 
 	// When
-	result, err := client.GetAdditionalDisk("12345", "6000C29d-e3d1-85ce-af08-acf6bae05978")
+	result, err := client.GetVMDisk("12345", "6000C29d-e3d1-85ce-af08-acf6bae05978")
 
 	// Assert
 	assert.NoError(t, err)

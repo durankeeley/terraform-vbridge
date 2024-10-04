@@ -17,7 +17,6 @@ func Schema() map[string]*schema.Schema {
 		"vm_id": {
 			Type:     schema.TypeString,
 			Required: true,
-			ForceNew: true,
 		},
 	}
 }

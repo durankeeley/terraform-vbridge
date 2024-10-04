@@ -78,7 +78,7 @@ func findNewDiskMoRef(initialDisks, updatedDisks []VirtualDisk) string {
 	return ""
 }
 
-func (c *Client) GetAdditionalDisk(vmID string, diskID string) (*VirtualDisk, error) {
+func (c *Client) GetVMDisk(vmID string, diskID string) (*VirtualDisk, error) {
 	vm, err := c.GetVMDetailedByID(vmID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get VM details: %v", err)
@@ -91,4 +91,39 @@ func (c *Client) GetAdditionalDisk(vmID string, diskID string) (*VirtualDisk, er
 	}
 
 	return nil, fmt.Errorf("disk with MoRef %s not found in VM %s", diskID, vmID)
+}
+
+func (c *Client) ExtendVMDisk(vmID string, diskID string, newDiskSize int) error {
+	endpoint := "/api/VirtualResource/ExtendDisk"
+	payload := ExtendDiskPayload{
+		VirtualResourceId: vmID,
+		DiskUUID:          diskID,
+		NewSize:           newDiskSize,
+		Description:       "",
+	}
+
+	resp, err := c.apiRequest("POST", endpoint, payload)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func (c *Client) DeleteVMDisk(vmID string, diskID string) error {
+	endpoint := "/api/virtualresource/DeleteDisk"
+	payload := DeleteDiskPayload{
+		VirtualResourceId: vmID,
+		DiskUUID:          diskID,
+		Description:       "",
+	}
+
+	resp, err := c.apiRequest("POST", endpoint, payload)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
 }
