@@ -38,7 +38,7 @@ func (c *Client) apiRequest(method, endpoint string, payload interface{}) (*http
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	req.Header.Set("Authorization", "apiKey "+c.APIKey)
 	req.Header.Set("x-mcs-user", c.UserEmail)
 	req.Header.Set("Content-Type", "application/json")
 

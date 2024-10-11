@@ -223,7 +223,7 @@ func TestGetAdditionalDisk(t *testing.T) {
 	assert.NoError(t, err)
 	disk := VirtualDisk{
 		MoRef:          "6000C29d-e3d1-85ce-af08-acf6bae05978",
-		Capacity:       100,
+		Capacity:       100.0,
 		StorageProfile: "vStorageT1",
 	}
 	assert.Equal(t, disk.MoRef, result.MoRef)
