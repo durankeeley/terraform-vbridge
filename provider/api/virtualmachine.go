@@ -111,6 +111,10 @@ func (c *Client) GetVMDetailedByID(vmID string) (VirtualMachine, error) {
 		if friendlyName, ok := storageProfileMap[disk.Tier]; ok {
 			vm.Specification.VirtualDisks[i].Tier = friendlyName
 		}
+
+		if storageProfile, ok := storageProfileMap[disk.Tier]; ok {
+			vm.Specification.VirtualDisks[i].StorageProfile = storageProfile
+		}
 	}
 
 	return vm, nil
