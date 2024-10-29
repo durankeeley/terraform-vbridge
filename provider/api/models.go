@@ -50,7 +50,8 @@ type NetworkDevice struct {
 
 type VirtualDisk struct {
 	// Detailed returns Capacity as a float
-	Capacity            int    `json:"capacity"`
+	Capacity int `json:"capacity"`
+	// StorageProfile is only used for POST /api/Provisioning/VirtualMachine and only when Template not used
 	StorageProfile      string `json:"storageProfile"`
 	MoRef               string `json:"moRef,omitempty"`
 	Vmfs                string `json:"vmfs,omitempty"`
@@ -93,4 +94,17 @@ type CreateAdditionalDiskPayload struct {
 	VirtualResourceId string `json:"virtualResourceId"`
 	Tier              string `json:"tier"`
 	Size              int    `json:"size"`
+}
+
+type ExtendDiskPayload struct {
+	VirtualResourceId string `json:"VirtualResourceId"`
+	DiskUUID          string `json:"diskUUID"`
+	NewSize           int    `json:"newSize"`
+	Description       string `json:"description"`
+}
+
+type DeleteDiskPayload struct {
+	VirtualResourceId string `json:"VirtualResourceId"`
+	DiskUUID          string `json:"diskUUID"`
+	Description       string `json:"description"`
 }

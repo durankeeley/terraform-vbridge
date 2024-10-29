@@ -1,8 +1,9 @@
 package virtualmachine
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func Schema() map[string]*schema.Schema {
@@ -30,6 +31,10 @@ func Schema() map[string]*schema.Schema {
 		"memory_size": {
 			Type:     schema.TypeInt,
 			Required: true,
+		},
+		"operating_system_disk_guid": {
+			Type:     schema.TypeString,
+			Computed: true,
 		},
 		"operating_system_disk_capacity": {
 			Type:     schema.TypeInt,

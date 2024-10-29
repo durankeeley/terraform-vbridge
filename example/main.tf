@@ -58,7 +58,7 @@ resource "vbridge_virtual_machine" "example" {
 
    lifecycle {
     ignore_changes = [
-      guest_os_id, hosting_location_default_network
+      guest_os_id
     ]
    }
 }
@@ -67,7 +67,7 @@ resource "vbridge_virtual_machine" "example" {
 resource "vbridge_virtual_machine_additionaldisk" "disk2" {
   vm_id = resource.vbridge_virtual_machine.example.vm_id
   storage_profile = "vStorageT1"
-  capacity = 35
+  capacity = 47
 }
 
 # # General Use Disk 
