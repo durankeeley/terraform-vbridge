@@ -9,8 +9,9 @@ import (
 func Schema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"client_id": {
-			Type:     schema.TypeInt,
-			Required: true,
+			Type:      schema.TypeInt,
+			Required:  true,
+			Sensitive: true,
 		},
 		"name": {
 			Type:     schema.TypeString,

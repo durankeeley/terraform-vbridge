@@ -3,8 +3,9 @@ package provider
 import (
 	"context"
 	"terraform-provider-vbridge/api"
+	objectstoragebucket "terraform-provider-vbridge/resource/objectstorage_bucket"
 	"terraform-provider-vbridge/resource/virtualmachine"
-	"terraform-provider-vbridge/resource/virtualmachine_additionaldisk"
+	additionaldisk "terraform-provider-vbridge/resource/virtualmachine_additionaldisk"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -30,6 +31,7 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"vbridge_virtual_machine":                virtualmachine.Resource(),
 			"vbridge_virtual_machine_additionaldisk": additionaldisk.Resource(),
+			"vbridge_objectstorage_bucket":           objectstoragebucket.Resource(),
 		},
 		ConfigureContextFunc: configureProvider,
 	}

@@ -228,5 +228,5 @@ func TestGetAdditionalDisk(t *testing.T) {
 	}
 	assert.Equal(t, disk.MoRef, result.MoRef)
 	assert.Equal(t, disk.StorageProfile, result.StorageProfile)
-
+	assert.Equal(t, disk.Capacity, result.Capacity)
 }
