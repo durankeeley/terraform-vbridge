@@ -20,7 +20,6 @@ variable "api_url" {
   description = "URL for the API"
   type        = string
   default = "http://127.0.0.1:8087"
-  sensitive   = true
 }
 
 variable "objectstorage_tenant_id" {
@@ -41,6 +40,11 @@ terraform {
       version = "~> 1.0.1"
       source  = "durankeeley.com/vbridge/vbridge-vm"
     }
+
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
   }
 }
 
@@ -55,4 +59,37 @@ resource "vbridge_objectstorage_bucket" "examplebucket" {
   canonical_user_id = "${var.canonical_user_id}"
   bucket_name = "sdcterraformbucket"
   object_lock = false
+}
+
+provider "aws" {
+  access_key                  = ""
+  secret_key                  = ""
+  region                      = "us-east-1"
+
+  s3_use_path_style           = true
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+
+  endpoints {
+    s3       = "https://s3-chc.mycloudspace.co.nz"
+    dynamodb = "https://s3-chc.mycloudspace.co.nz"
+  }
+}
+
+resource "aws_s3_bucket_cors_configuration" "example" {
+  bucket = vbridge_objectstorage_bucket.examplebucket.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "POST"]
+    allowed_origins = ["https://s3-chc.mycloudspace.co.nz"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+
+  cors_rule {
+    allowed_methods = ["GET"]
+    allowed_origins = ["*"]
+  }
 }
